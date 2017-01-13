@@ -16,7 +16,7 @@ Finally after some tinkering and a little scripting I found a better and working
 
 #### Install and configure Sandstorm
 
-Do the initial installation and configuration of Sandstorm, choosing to enable the Sandcats service. Don't start the service yet. Now edit your `sandstorm.conf` file and configure it to also use HTTPS or uncommenting the line:
+Do the initial installation and configuration of Sandstorm, choosing to enable the Sandcats service. Don't start the service yet. Now edit your `sandstorm.conf` file and configure it to also use HTTPS by adding or uncommenting the line:
 
 ```bash
 HTTPS_PORT=443
