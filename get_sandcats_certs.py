@@ -11,7 +11,8 @@ def parse_arguments():
     import argparse
 
     parser = argparse.ArgumentParser(description=__desc__)
-    parser.add_argument('-o', '--certs_origin_dir', default='/opt/sandstorm/var/sandcats/https/YOURSUBDOMAIN.sandcats.io',
+    parser.add_argument('-o', '--certs_origin_dir', 
+            default='/opt/sandstorm/var/sandcats/https/YOURSUBDOMAIN.sandcats.io',
             help='Origin directory holding sandcats.io SSL certificate and private keys')
     parser.add_argument('-d', '--certs_dest_dir', default='/etc/nginx/ssl',
             help='Where to copy the SSL certificates')
