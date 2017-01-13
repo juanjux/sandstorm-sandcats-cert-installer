@@ -29,7 +29,7 @@ python get_sandcats_certs.py --certs_origin_dir='/opt/sandstorm/var/sandcats/htt
 
 #### Configure Sandstorm network
 
-Configure Sandstorm to serve **unencripted HTTP** on any port that is not 443 and not accesible from the Internet. If you are [running Sandstorm on a Docker container](https://docs.sandstorm.io/en/latest/install/#option-6-using-sandstorm-within-docker) (like I do) just remove the "-p" parameter for the docker run command and add the port as a --expose like:
+Configure Sandstorm to serve **unencripted HTTP** on any port that is not 443 and not accesible from the Internet. If you are [running Sandstorm on a Docker container](https://docs.sandstorm.io/en/latest/install/#option-6-using-sandstorm-within-docker) (like I do) just remove the `-p` parameter for the `docker run` command and add the port as a `--expose` like:
 
 ```bash
 sudo docker run --name sandstorm \
