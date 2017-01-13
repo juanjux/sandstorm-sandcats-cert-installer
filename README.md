@@ -24,7 +24,7 @@ So you get those certs in your reverse proxy directory (for nginx this would tip
 python get_sandcats_certs.py --certs_origin_dir='/opt/sandstorm/var/sandcats/https' \
                              --certs_dest_dir='/etc/nginx/conf/ssl' \
                              --key_filename='sandstorm.key' \
-                             --dest_filename='sandstorm.pem'
+                             --cert_filename='sandstorm.pem'
 ```
 
 #### Configure Sandstorm network
