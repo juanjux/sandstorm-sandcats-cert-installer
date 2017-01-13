@@ -56,7 +56,7 @@ BIND_IP=127.0.0.1
 
 ### Configure the reverse proxy
 
-The reverse proxy will receive the HTTPS connections securely at the yourname.sandcats.io domain on the normal 443 port, using Sandstorm certificates and will proxy them to your Sandstorm service.
+The reverse proxy will receive the HTTPS connections securely at the `https://yourname.sandcats.io` domain on the normal 443 port, using Sandstorm certificates and will proxy them to your Sandstorm service.
 
 For example with nginx this should work:
 
@@ -91,6 +91,6 @@ server {
   }
 }
 ```
-Dont forget to point the ssl_certificate and the ssl_certificate_key to the directory where the script copied the certificates.
+Dont forget to point the `ssl_certificate` and `ssl_certificate_key` options to the directory where the script copied the certificates.
 
-And after restarting Sandstorm and nginx this should work; at least it works perfectly for me, don't count on me for technical support, I don't work for Sandstorm.
+And after restarting Sandstorm and nginx this should work; at least it works perfectly for me but don't count on me for technical support, I don't work for Sandstorm.
