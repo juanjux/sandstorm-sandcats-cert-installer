@@ -11,7 +11,7 @@ def parse_arguments():
     import argparse
 
     parser = argparse.ArgumentParser(description=__desc__)
-    parser.add_argument('-o', '--certs_origin_dir', default='/opt/sandstorm/var/sandcats/https',
+    parser.add_argument('-o', '--certs_origin_dir', default='/opt/sandstorm/var/sandcats/https/YOURSUBDOMAIN.sandcats.io',
             help='Origin directory holding sandcats.io SSL certificate and private keys')
     parser.add_argument('-d', '--certs_dest_dir', default='/etc/nginx/ssl',
             help='Where to copy the SSL certificates')
@@ -123,8 +123,6 @@ def main():
     cert_text = extract_cert(certfile)
     dest_file_cert = join(args.certs_dest_dir, args.cert_filename)
     dest_file_key  = join(args.certs_dest_dir, args.key_filename)
-
-    # XXX crear directorio de destino si no existe
 
     if os.path.exists(dest_file_cert):
         # Dont overwrite if it didnt change
