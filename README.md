@@ -10,26 +10,55 @@ By default this is not obvious to do because:
 
 - Self signed wildcard certiciates work... more or less. Usually they make the images doesn't load correctly even if you accept the certificate (happened to me on Chrome, Opera, in Firefox grains wouldn't even load) or require you to create a rootCA cert and install it on every machine where you want to use Sandstorm. Which defeats the purpose of having web apps and it's not always easy to do on some phones or other non-PC devices.
 
-The solution is to follow these steps:
+The [official documentation](https://docs.sandstorm.io/en/latest/administering/ssl/) advices to use [sniproxy](https://github.com/dlundquist/sniproxy) if you want to share the 443 port between your reverse proxy and your sandstorm installation. I did that for a while, having a dockerized sniproxy in front of both nginx and Sandstorm redirecting to the correct one based on the ssl handshake. I run like this for a while, but I had two problems. First, there was a noticeable performance penalty in requests/second compared to unproxied nginx. The second problem is that I saw that there was some leaking something between domains. For example using some web tool to analyze site performance that showed all requests I saw that, oddly, there were some requests of .js files that landed on my name.sandcats.io domain, and they delayed the page loading.
+
+Finally after some tinkering and a little scripting I found a better and working solution. Follow these steps:
 
 #### Install and configure Sandstorm
 
-Do the initial configuration of Sandstorm enabling the Sandcats service (so you get your free wildcard certificates).
-
-#### Run this script
-
-So you get those certs in your reverse proxy directory (for nginx this would tipically be `/etc/nginx/ssl`). Since Sancats.io certificates must be renewed weekly I suggest to add this to your cron. An example call could be:
+Do the initial installation and configuration of Sandstorm, choosing to enable the Sandcats service. Don't start the service yet. Now edit your `sandstorm.conf` file and configure it to also use HTTPS or uncommenting the line:
 
 ```bash
-python get_sandcats_certs.py --certs_origin_dir='/opt/sandstorm/var/sandcats/https' \
+HTTPS_PORT=443
+```
+
+Its important to keep the port number of the `HTTPS_PORT` option at 443 on the since Sandcats.io certs only work for connections on this port. If you are running your Sandstorm service inside a Docker container you can leave this option enabled since this way the short-lived certificates will continue autorenewing themselves and you are not exporting the 443 port outside the container (see below) so it won't conflict with your reverse proxy.
+
+If you aren't using Docker or some other virtualizing environment, probably you need to specify some other port and firewall it, but I don't know if this will work and will fetch the right certificates, or fetch them at all (if someone tries this please tell me). Another solution would be to briefly stop your reverse proxy and reenabling the HTTPS port on Sandstorm to let it fetch certificates when they expire. But this is not very elegant. 
+
+Next step is to change the `BASE_URL` to use start with `https://` even if you have disabled the `HTTPS_PORT` setting, because thats the URL that will really be used to access the service once its running behind the reverse proxy (and OAUTH won't work if the URL is not this one).
+
+```bash
+# BASE_URL=http://yourname.sandcats.io
+BASE_URL=https://yourname.sandcats.io
+```
+
+Then:
+
+- Stop your reverse proxy so the 443 port is free
+- Run the sandstorm service, making sure that the 443 port is accesible from the outside (unfirewall it, enable it on docker, whatever)
+- Check with your browser that you can access your https URL
+- Check the logs on `[sandstorm_dir]/data/var/log/sandstorm/log`) to see that it fetched the certificates without problems
+- Double check that the files are on `[sandstorm_dir]/data/var/sandcats/https/yourname.sandcats.io` (they are like timestamps with `.csr` or `response-json` extensions or no extension, with the timestamp being the expiration date)
+- Finally stop sandstorm, and if you run it dockerized unexport the 443 port but expose the HTTP port (see below in the network section) or if you are running it uncontained change or disable the `HTTPS_PORT` setting as needed.
+- Wake up both your reverse proxy and sandstorm services.
+
+#### Run the script on this repo
+
+This will get Sandcats.io certs in your reverse proxy directory (for nginx this would tipically be `/etc/nginx/ssl`). Since Sancats.io certificates must be renewed weekly I suggest to add this to your cron. An example call could be:
+
+```bash
+python get_sandcats_certs.py --certs_origin_dir='/opt/sandstorm/var/sandcats/https/myname.sandcats.io' \
                              --certs_dest_dir='/etc/nginx/conf/ssl' \
                              --key_filename='sandstorm.key' \
                              --cert_filename='sandstorm.pem'
 ```
 
-#### Configure Sandstorm network
+Please note that the `key_filename` and `cert_filename` parameters are the desired filenames on the **DESTINATION** path (the ones that your reverse proxy will use), not the original ones on the Sandstorm directory; for those the script will take care of finding the most recent ones an extracting them from the JSON files they're stored in.
 
-Configure Sandstorm to serve **unencripted HTTP** on any port that is not 443 and not accesible from the Internet. If you are [running Sandstorm on a Docker container](https://docs.sandstorm.io/en/latest/install/#option-6-using-sandstorm-within-docker) (like I do) just remove the `-p` parameter for the `docker run` command and add the port as a `--expose` like:
+#### Configure Sandstorm network parameters
+
+Configure Sandstorm to serve **unencripted HTTP** on any port that is not 443 and not accesible from the Internet (for example, leaving the default 6080 port). If you are [running Sandstorm on a Docker container](https://docs.sandstorm.io/en/latest/install/#option-6-using-sandstorm-within-docker) (like I do) just remove the `-p` parameter for the `docker run` command and add the port as a `--expose` like:
 
 ```bash
 sudo docker run --name sandstorm \
@@ -52,7 +81,7 @@ For:
 BIND_IP=127.0.0.1
 ```
 
-*(don't do this on containers - remember that every container with Docker has its own IP!).*
+*(but don't do this on containers - remember that every container with Docker has its own IP so if you do this it won't allow connections from your reverse proxy).*
 
 ### Configure the reverse proxy
 
@@ -91,6 +120,4 @@ server {
   }
 }
 ```
-Dont forget to point the `ssl_certificate` and `ssl_certificate_key` options to the directory where the script copied the certificates.
-
-And after restarting Sandstorm and nginx this should work; at least it works perfectly for me but don't count on me for technical support, I don't work for Sandstorm.
+Dont forget to point the `ssl_certificate` and `ssl_certificate_key` options to the directory where the script copied the certificates. Then restart the reverse proxy checking the logs so see if there is any problem with your config and restart sandstorm. The service should be accesible using your normal `https://yourname.sandcats.io` domain.
