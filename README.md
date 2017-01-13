@@ -16,9 +16,16 @@ The solution is to follow these steps:
 
 Do the initial configuration of Sandstorm enabling the Sandcats service (so you get your free wildcard certificates).
 
-#### Configure and run this script
+#### Run this script
 
-So you get those certs in your reverse proxy directory (for nginx this would tipically be `/etc/nginx/ssl`).
+So you get those certs in your reverse proxy directory (for nginx this would tipically be `/etc/nginx/ssl`). Since Sancats.io certificates must be renewed weekly I suggest to add this to your cron. An example call could be:
+
+```bash
+python get_sandcats_certs.py --certs_origin_dir='/opt/sandstorm/var/sandcats/https' \
+                             --certs_dest_dir='/etc/nginx/conf/ssl' \
+                             --key_filename='sandstorm.key'
+                             --dest_filename='sandstorm.pem'
+```
 
 #### Configure Sandstorm network
 
