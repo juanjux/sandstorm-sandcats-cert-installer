@@ -3,8 +3,6 @@ __desc__ = "Fetch Sandstorm' Sandcat.io certificates"
 __autor__ = "Juanjo Alvarez <juanjo@juanjoalvarez.net>"
 __license__ = "MIT"
 
-import logging
-logging.basicConfig()
 import json
 import os
 from os.path import join, exists, isdir, splitext, split, sep
@@ -31,14 +29,14 @@ def parse_arguments():
         parser.print_help()
         exit(1)
 
-    if sep in args.ssl_key_filename or sep in args.ssl_cert_filename:
+    if sep in args.key_filename or sep in args.cert_filename:
         printerror('Dont use directories with -k or -c, just the filename!')
 
     if not exists(args.certs_origin_dir):
         printerror('Specified directory for the Sandcats certificates doesnt exist')
 
     if not exists(args.certs_dest_dir):
-        logging.warning('The specified destination directory doesnt exist')
+        print('WARNING: The specified destination directory doesnt exist')
 
     return args
 
@@ -51,11 +49,11 @@ def get_cert_files(orig_dir, dest_dir):
     """
 
     if not exists(orig_dir) or not isdir(orig_dir):
-        logging.error('Configured Sandcats SSL directory doesnt exists or is not a dir')
+        print('ERROR: Configured Sandcats SSL directory doesnt exists or is not a dir')
         exit(1)
 
     if not exists(dest_dir) or not isdir(dest_dir):
-        logging.error('Configured destination directory doesnt exists or is not a dir')
+        print('ERROR: Configured destination directory doesnt exists or is not a dir')
         exit(1)
 
     origfiles = (join(orig_dir, fn) for fn in os.listdir(orig_dir))
@@ -76,7 +74,7 @@ def get_cert_files(orig_dir, dest_dir):
                 with open(f) as fp:
                     json.loads(fp.read())
             except Exception as e:
-                logging.warning('JSON file has wrong format, ignoring: %s (%s)' % (f, e))
+                print('WARNING: JSON file has wrong format, ignoring: %s (%s)' % (f, e))
                 continue
             grouper.setdefault(namepart, {})['jsoncert'] = f
         elif '.' not in os.path.split(f)[1]:
@@ -134,10 +132,11 @@ def main():
             text_orig = d.read().strip()
 
         if text_orig == cert_text.strip():
-            exit(0)
+            print('Certificates updated, not installing anything')
+            exit(1)
 
     # Install the new certs
-    logging.info('Certificates changed, installing new certificates')
+    print('Certificates changed, installing new certificates')
     with open(dest_file_cert, 'w') as pemfile:
         pemfile.write(cert_text)
 
