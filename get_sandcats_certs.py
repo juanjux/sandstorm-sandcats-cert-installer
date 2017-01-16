@@ -3,15 +3,19 @@ __desc__ = "Fetch Sandstorm' Sandcat.io certificates"
 __autor__ = "Juanjo Alvarez <juanjo@juanjoalvarez.net>"
 __license__ = "MIT"
 
-import json
 import os
+import json
+import shutil
 from os.path import join, exists, isdir, splitext, split, sep
 
 def parse_arguments():
     import argparse
 
     parser = argparse.ArgumentParser(description=__desc__)
-    parser.add_argument('-o', '--certs_origin_dir', default='/opt/sandstorm/var/sandcats/https',
+    parser.add_argument('-x', '--lxd_certs_origin_dir', default=None,
+            help='Origin directory in an LXD container. Use the syntax '
+            'container_name/path/to/directory')
+    parser.add_argument('-o', '--certs_origin_dir', default=None,
             help='Origin directory holding sandcats.io SSL certificate and private keys')
     parser.add_argument('-d', '--certs_dest_dir', default='/etc/nginx/ssl',
             help='Where to copy the SSL certificates')
@@ -32,7 +36,7 @@ def parse_arguments():
     if sep in args.key_filename or sep in args.cert_filename:
         printerror('Dont use directories with -k or -c, just the filename!')
 
-    if not exists(args.certs_origin_dir):
+    if args.certs_origin_dir and not exists(args.certs_origin_dir):
         printerror('Specified directory for the Sandcats certificates doesnt exist')
 
     if not exists(args.certs_dest_dir):
@@ -115,35 +119,71 @@ def extract_cert(filepath):
     return cert_text + '\n' + catext if catext else cert_text
 
 
+def lxd_pull_files(lxd_dir):
+    """
+    Makes an 'lxc pull' of the certificates to a temporal directory
+    and deletes that directory before finishing
+    """
+
+    from tempfile import mkdtemp
+    import subprocess
+
+    tmp_dir = mkdtemp()
+    cmdlist = ['lxc', 'file', 'pull', '--recursive', lxd_dir, tmp_dir]
+    subprocess.check_call(cmdlist)
+
+    # Typically this will pull the directory user.sandcats.io, find the files
+    # and move them to tmp_dir
+    lfiles = os.listdir(tmp_dir)
+    if len(lfiles) == 1:
+        single_item = join(tmp_dir, lfiles[0])
+        if isdir(single_item):
+            subprocess.check_call('mv {}/* {}'.format(single_item, tmp_dir),
+                                  shell = True)
+            os.rmdir(single_item)
+
+    return tmp_dir
+
+
 def main():
     args = parse_arguments()
 
-    certfile, privkey = get_cert_files(args.certs_origin_dir,
-                                      args.certs_dest_dir)
-    cert_text = extract_cert(certfile)
-    dest_file_cert = join(args.certs_dest_dir, args.cert_filename)
-    dest_file_key  = join(args.certs_dest_dir, args.key_filename)
+    if args.lxd_certs_origin_dir:
+        origin_dir = lxd_pull_files(args.lxd_certs_origin_dir)
+        delete_dir = True
+    else:
+        origin_dir = args.certs_origin_dir
+        delete_dir = False
 
-    # XXX crear directorio de destino si no existe
+    try:
+        certfile, privkey = get_cert_files(origin_dir,
+                                          args.certs_dest_dir)
+        cert_text = extract_cert(certfile)
+        dest_file_cert = join(args.certs_dest_dir, args.cert_filename)
+        dest_file_key  = join(args.certs_dest_dir, args.key_filename)
 
-    if os.path.exists(dest_file_cert):
-        # Dont overwrite if it didnt change
-        with open(dest_file_cert) as d:
-            text_orig = d.read().strip()
+        # XXX crear directorio de destino si no existe
 
-        if text_orig == cert_text.strip():
-            print('Certificates updated, not installing anything')
-            exit(1)
+        if os.path.exists(dest_file_cert):
+            # Dont overwrite if it didnt change
+            with open(dest_file_cert) as d:
+                text_orig = d.read().strip()
 
-    # Install the new certs
-    print('Certificates changed, installing new certificates')
-    with open(dest_file_cert, 'w') as pemfile:
-        pemfile.write(cert_text)
+            if text_orig == cert_text.strip():
+                exit(1)
 
-    with open(dest_file_key, 'w') as keyfile:
-        with open(privkey) as orig_key:
-            key_text = orig_key.read()
-        keyfile.write(key_text)
+        # Install the new certs
+        print('Certificates changed, installing new certificates')
+        with open(dest_file_cert, 'w') as pemfile:
+            pemfile.write(cert_text)
+
+        with open(dest_file_key, 'w') as keyfile:
+            with open(privkey) as orig_key:
+                key_text = orig_key.read()
+            keyfile.write(key_text)
+    finally:
+        if delete_dir:
+            shutil.rmtree(origin_dir)
 
 
 if __name__ == '__main__':
