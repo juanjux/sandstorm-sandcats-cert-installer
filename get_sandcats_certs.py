@@ -110,8 +110,9 @@ def extract_cert(filepath):
     with open(filepath) as f:
         certjson = json.loads(f.read())
 
-    if 'ca' in certjson and len(certjson['ca']) == 2:
-        catext = certjson['ca'][1].replace('\r\n', '\n')
+    if 'ca' in certjson and len(certjson['ca']) > 1:
+        catext = '\n'.join(certjson['ca']).replace('\r\n', '\n')
+        # catext = certjson['ca'][1].replace('\r\n', '\n')
     else:
         catext = None
     cert_text = certjson['cert'].replace('\r\n', '\n')
