@@ -25,6 +25,8 @@ def parse_arguments():
     parser.add_argument('-c', '--cert_filename', default='sandstorm.pem',
             help='Default filename (without directory) for the certificate file on the DESTINATION,\n'+
                  'DONT set this to the original Sandstorm certificate!')
+    parser.add_argument('-r', '--restart_command', default='sudo systemctl restart nginx',
+            help='Run this command to restart the reverse proxy. Set to "None" to handle it externally.')
 
     args = parser.parse_args()
 
@@ -182,6 +184,8 @@ def main():
             with open(privkey) as orig_key:
                 key_text = orig_key.read()
             keyfile.write(key_text)
+        if args.restart_command != 'None':
+            subprocess.check_call(args.restart_command, shell = True)
     finally:
         if delete_dir:
             shutil.rmtree(origin_dir)
