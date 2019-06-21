@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 __desc__ = "Fetch Sandstorm' Sandcat.io certificates"
 __autor__ = "Juanjo Alvarez <juanjo@juanjoalvarez.net>"
 __license__ = "MIT"
@@ -87,7 +87,7 @@ def get_cert_files(orig_dir, dest_dir):
     # Now that we have the files nicely grouped by their namepart, get them sorted
     # by the most recent "oldest in the group" date
     cert_tuples = []
-    for key, group in grouper.items():
+    for key, group in list(grouper.items()):
         # filter out the single element groups
         if 'jsoncert' not in group or 'privkey' not in group:
             continue
